@@ -4,7 +4,7 @@ Small FastAPI practice project with:
 
 - User registration + login
 - JWT auth (Bearer token)
-- Simple todo CRUD backed by MySQL (via SQLAlchemy + PyMySQL)
+- Simple todo CRUD backed by Turso (libSQL / SQLite via SQLAlchemy)
 
 ## Requirements
 
@@ -30,10 +30,11 @@ pip install -r requirements.txt
 
 3) Configure the app
 
-The app currently uses hard-coded values in `app/main.py`:
+The app reads configuration from environment variables in `app/main.py`:
 
-- `DATABASE_URL` (default): `mysql+pymysql://root:root@localhost:8080/pythondb`
-- `SECRET_KEY` (default): `your-secret-key-change-this-in-production`
+- Turso (recommended): `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`
+- Local fallback: `DATABASE_URL` (default: `sqlite:///./local.db`)
+- `SECRET_KEY` (default): `dev-secret-key-change-me`
 
 Update these before running (especially `SECRET_KEY`).
 
@@ -43,20 +44,19 @@ The code expects `users` and `todos` tables with at least these columns:
 
 ```sql
 CREATE TABLE users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(255) NOT NULL UNIQUE,
-  email VARCHAR(255) NOT NULL,
-  password VARCHAR(255) NOT NULL
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL,
+  password TEXT NOT NULL
 );
 
 CREATE TABLE todos (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  todo VARCHAR(255) NOT NULL,
-  body TEXT,
-  completed TINYINT(1) NOT NULL DEFAULT 0,
-  created_by INT NOT NULL,
-  INDEX (created_by),
-  CONSTRAINT fk_todos_users FOREIGN KEY (created_by) REFERENCES users(id)
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  todo TEXT NOT NULL,
+  body TEXT DEFAULT '',
+  completed INTEGER NOT NULL DEFAULT 0,
+  created_by INTEGER NOT NULL,
+  FOREIGN KEY (created_by) REFERENCES users(id)
 );
 ```
 
@@ -118,3 +118,25 @@ List todos:
 curl "http://127.0.0.1:8000/todos" -H "Authorization: Bearer <TOKEN>"
 ```
 
+## Deploy (Vercel)
+
+This repo includes an `index.py` that re-exports the FastAPI `app` from `app/main.py`, which matches Vercel’s Python/FastAPI entrypoint detection.
+
+### 1) Set environment variables
+
+In your Vercel project settings, add:
+
+- `TURSO_DATABASE_URL`
+- `TURSO_AUTH_TOKEN`
+- `SECRET_KEY` (strong random value)
+- Optional: `ACCESS_TOKEN_EXPIRE_HOURS` (default `24`)
+
+### 2) Deploy
+
+Using the Vercel CLI:
+
+```bash
+vercel deploy
+```
+
+Or connect the Git repo in the Vercel dashboard and deploy from there.

@@ -1,6 +1,7 @@
 sqlalchemy
-pymysql
 uvicorn
 fastapi
 bcrypt
 PyJWT
+sqlalchemy-libsql
+libsql

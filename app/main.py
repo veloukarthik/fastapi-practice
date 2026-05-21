@@ -5,20 +5,35 @@ import bcrypt
 import jwt
 from datetime import datetime, timedelta
 from typing import Optional
+import os
 
 app = FastAPI()
 
 # Security scheme
 security = HTTPBearer()
 
-# Secret key for JWT (change this to a strong secret in production)
-SECRET_KEY = "your-secret-key-change-this-in-production"
+# Secret key for JWT (set via env in production)
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_HOURS = 24
+ACCESS_TOKEN_EXPIRE_HOURS = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", "24"))
 
-# Database connection
-DATABASE_URL = "mysql+pymysql://root:root@localhost:8080/pythondb"
-engine = create_engine(DATABASE_URL)
+# Database connection (Turso / libSQL or local SQLite)
+TURSO_DATABASE_URL = os.getenv("TURSO_DATABASE_URL")
+TURSO_AUTH_TOKEN = os.getenv("TURSO_AUTH_TOKEN")
+
+if TURSO_DATABASE_URL:
+    engine = create_engine(
+        f"sqlite+libsql://{TURSO_DATABASE_URL}?secure=true",
+        connect_args={"auth_token": TURSO_AUTH_TOKEN},
+        pool_pre_ping=True,
+    )
+else:
+    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./local.db")
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
+        pool_pre_ping=True,
+    )
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
